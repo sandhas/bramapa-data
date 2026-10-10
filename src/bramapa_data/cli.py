@@ -22,15 +22,18 @@ def build_parser() -> argparse.ArgumentParser:
     parser.add_argument("--version", action="version", version=f"%(prog)s {__version__}")
     sub = parser.add_subparsers(dest="command", required=True)
 
-    p_validate = sub.add_parser("validate", help="validate every addon under ADDONS_DIR")
-    p_validate.add_argument("addons_dir", nargs="?", default=DEFAULT_ADDONS_DIR, metavar="ADDONS_DIR")
+    dirs_help = (
+        f"one or more addon root directories, validated as a single set (default: {DEFAULT_ADDONS_DIR})"
+    )
+    p_validate = sub.add_parser("validate", help="validate every addon under the ADDONS_DIR roots")
+    p_validate.add_argument("addons_dirs", nargs="*", default=[DEFAULT_ADDONS_DIR], metavar="ADDONS_DIR", help=dirs_help)
     p_validate.add_argument("-q", "--quiet", action="store_true", help="print only ERROR findings")
 
     p_list = sub.add_parser("list", help="list addons and their canonical property ids")
-    p_list.add_argument("addons_dir", nargs="?", default=DEFAULT_ADDONS_DIR, metavar="ADDONS_DIR")
+    p_list.add_argument("addons_dirs", nargs="*", default=[DEFAULT_ADDONS_DIR], metavar="ADDONS_DIR", help=dirs_help)
 
     p_build = sub.add_parser("build", help="validate, then write .bmd files and index.toml to --out")
-    p_build.add_argument("addons_dir", nargs="?", default=DEFAULT_ADDONS_DIR, metavar="ADDONS_DIR")
+    p_build.add_argument("addons_dirs", nargs="*", default=[DEFAULT_ADDONS_DIR], metavar="ADDONS_DIR", help=dirs_help)
     p_build.add_argument("--out", required=True, metavar="DIR", help="output directory (created if missing)")
     p_build.add_argument("-q", "--quiet", action="store_true", help="print only ERROR findings and the summary")
 
@@ -40,15 +43,15 @@ def build_parser() -> argparse.ArgumentParser:
     return parser
 
 
-def cmd_validate(addons_dir: Path, quiet: bool) -> int:
-    findings = validate(addons_dir)
+def cmd_validate(addons_dirs: list[Path], quiet: bool) -> int:
+    findings = validate(addons_dirs)
     for finding in findings:
         if quiet and finding.level != "ERROR":
             continue
         print(finding)
     errors = sum(1 for f in findings if f.level == "ERROR")
     warnings = sum(1 for f in findings if f.level == "WARN")
-    addon_count = sum(1 for a in load_addons(addons_dir) if a.load_error is None)
+    addon_count = sum(1 for a in load_addons(addons_dirs) if a.load_error is None)
     summary = f"{addon_count} addon(s), {errors} error(s), {warnings} warning(s)"
     if has_errors(findings):
         sys.stdout.flush()
@@ -58,12 +61,14 @@ def cmd_validate(addons_dir: Path, quiet: bool) -> int:
     return 0
 
 
-def cmd_list(addons_dir: Path) -> int:
-    if not addons_dir.is_dir():
+def cmd_list(addons_dirs: list[Path]) -> int:
+    missing = [d for d in addons_dirs if not d.is_dir()]
+    for addons_dir in missing:
         print(f"ERROR addons: directory not found: {addons_dir}", file=sys.stderr)
+    if missing:
         return 1
     status = 0
-    for addon in load_addons(addons_dir):
+    for addon in load_addons(addons_dirs):
         if addon.load_error or addon.id is None:
             print(f"ERROR {addon.label}: {addon.load_error or 'manifest.toml has no addon.id'}", file=sys.stderr)
             status = 1
@@ -87,9 +92,9 @@ def cmd_list(addons_dir: Path) -> int:
     return status
 
 
-def cmd_build(addons_dir: Path, out_dir: Path, quiet: bool) -> int:
+def cmd_build(addons_dirs: list[Path], out_dir: Path, quiet: bool) -> int:
     try:
-        result = build(addons_dir, out_dir)
+        result = build(addons_dirs, out_dir)
     except BuildError as exc:
         for finding in exc.findings:
             if quiet and finding.level != "ERROR":
@@ -150,11 +155,11 @@ def cmd_inspect(file: Path, limit: int) -> int:
 def main(argv: list[str] | None = None) -> int:
     args = build_parser().parse_args(argv)
     if args.command == "validate":
-        return cmd_validate(Path(args.addons_dir), args.quiet)
+        return cmd_validate([Path(d) for d in args.addons_dirs], args.quiet)
     if args.command == "list":
-        return cmd_list(Path(args.addons_dir))
+        return cmd_list([Path(d) for d in args.addons_dirs])
     if args.command == "build":
-        return cmd_build(Path(args.addons_dir), Path(args.out), args.quiet)
+        return cmd_build([Path(d) for d in args.addons_dirs], Path(args.out), args.quiet)
     if args.command == "inspect":
         return cmd_inspect(Path(args.file), args.rows)
     return 2  # unreachable: argparse enforces the subcommand

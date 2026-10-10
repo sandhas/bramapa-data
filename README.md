@@ -39,8 +39,11 @@ uv run pytest                        # testes
 ```
 
 `validate` aceita outro diretório como argumento (`uv run bramapa-data validate caminho/addons`)
-e imprime uma linha por achado no formato `ERROR <addon>: <mensagem>` ou `WARN <addon>: ...`.
-Só `ERROR` derruba o build; `WARN` é pra você olhar.
+— ou vários (`uv run bramapa-data validate addons ../bramapa-addon-energia/addons`), validados
+como um conjunto só: ids únicos entre todos, `depends` resolvido entre eles. Imprime uma linha
+por achado no formato `ERROR <addon>: <mensagem>` ou `WARN <addon>: ...`. Só `ERROR` derruba o
+build; `WARN` é pra você olhar. Addons mantidos em outros repositórios estão listados em
+[COMMUNITY.md](COMMUNITY.md).
 
 O que o validador checa está em `addon.md` (as 8 regras): `spec_version`, id do addon, ids
 duplicados, `entity_type` resolvível, arquivos existentes e CSV no formato certo, chave
@@ -49,8 +52,8 @@ duplicados, `entity_type` resolvível, arquivos existentes e CSV no formato cert
 
 ## Build (`.bmd`)
 
-O motor não lê CSV. `bramapa-data build [ADDONS_DIR] --out DIR` valida tudo (qualquer `ERROR`
-aborta sem escrever nada) e transforma cada propriedade em um **`.bmd`**: um arquivo colunar
+O motor não lê CSV. `bramapa-data build [ADDONS_DIR ...] --out DIR` valida tudo (qualquer `ERROR`
+aborta sem escrever nada; vários diretórios de addons entram numa saída só) e transforma cada propriedade em um **`.bmd`**: um arquivo colunar
 pequeno — cabeçalho de 24 bytes (magic `BMDT`, `spec_version`, `dtype`, contagens) seguido de uma
 carga zstd com a tabela de entidades e as colunas `entity_idx`, `period_start`, `period_end` (dias
 desde 1970-01-01, inclusivo) e `value`, ordenadas por entidade e data pra permitir busca binária.

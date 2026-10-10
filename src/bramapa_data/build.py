@@ -20,7 +20,7 @@ from pathlib import Path
 
 from . import __version__
 from .bmd import Row, date_from_days, days_since_epoch, encode
-from .validate import Finding, has_errors, load_addons, parse_period, validate
+from .validate import AddonsDirs, Finding, as_dirs, has_errors, load_addons, parse_period, validate
 
 
 class BuildError(Exception):
@@ -98,11 +98,15 @@ def read_property_rows(path: Path, dtype: str) -> list[Row]:
     return rows
 
 
-def build(addons_dir: Path | str, out_dir: Path | str) -> BuildResult:
-    """Validate ``addons_dir`` and write the binary tree under ``out_dir``."""
-    addons_dir = Path(addons_dir)
+def build(addons_dirs: AddonsDirs, out_dir: Path | str) -> BuildResult:
+    """Validate ``addons_dirs`` (one root or several) and write the binary tree under ``out_dir``.
+
+    Addons from every root land side by side in ``out_dir`` and in one
+    ``index.toml``; ids are unique across roots, so nothing collides.
+    """
+    addons_dirs = as_dirs(addons_dirs)
     out_dir = Path(out_dir)
-    findings = validate(addons_dir)
+    findings = validate(addons_dirs)
     if has_errors(findings):
         raise BuildError(findings)
 
@@ -111,7 +115,7 @@ def build(addons_dir: Path | str, out_dir: Path | str) -> BuildResult:
     built_props: list[BuiltProperty] = []
     built_overrides: list[BuiltOverride] = []
 
-    for addon in sorted(load_addons(addons_dir), key=lambda a: a.label):
+    for addon in sorted(load_addons(addons_dirs), key=lambda a: a.label):
         assert addon.manifest is not None and addon.id is not None  # validated
         addon_out = out_dir / addon.id
         if addon_out.exists():

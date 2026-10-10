@@ -30,6 +30,46 @@ Se seus dados vêm de uma API (como o `ibge-core`, que puxa do SIDRA via `tools/
 comite o script junto e gere os CSVs com ele em vez de digitar: fica reprodutível e a revisão
 consegue rodar o mesmo comando.
 
+## Addon no seu próprio repositório
+
+Não precisa ser aqui. Um addon é um diretório `addons/<id>/manifest.toml` (mais os CSVs) e isso
+cabe em qualquer repositório git seu — o `bramapa-data` continua sendo só o validador, o
+builder e os addons "de base". O primeiro addon assim é o
+[`energia`](https://github.com/sandhas/bramapa-addon-energia) (tarifas e capacidade instalada
+da ANEEL).
+
+Layout mínimo do seu repo:
+
+```
+bramapa-addon-<nome>/
+  addons/<id>/manifest.toml     # igual a um addon daqui; o diretório tem o nome do addon.id
+  addons/<id>/data/*.csv
+  addons/<id>/README.md         # opcional; procedência pode ficar no README da raiz
+  tools/fetch_<nome>.py         # se os dados vêm de uma API, o script que os gera
+  README.md                     # o que é, fonte, licença, método, como validar
+  LICENSE                       # licença dos dados (a da fonte) + licença das ferramentas
+```
+
+Validar e buildar contra este repositório (clonado ao lado do seu):
+
+```sh
+cd ../bramapa-data
+uv run bramapa-data validate ../bramapa-addon-<nome>/addons                 # só o seu
+uv run bramapa-data validate addons ../bramapa-addon-<nome>/addons          # junto com os daqui
+uv run bramapa-data build addons ../bramapa-addon-<nome>/addons --out ../bramapa-data-build
+```
+
+`validate`, `list` e `build` aceitam vários diretórios de addons e tratam todos como **um
+conjunto**: `addon.id` tem que ser único entre todos os diretórios e um `depends` pode apontar
+pra um addon de outro diretório. O build coloca tudo lado a lado na saída e num `index.toml`
+só, que é o que o motor lê (`cargo run -- --data ../bramapa-data-build`). Valide sempre junto
+com `addons/` daqui antes de publicar, pra garantir que seu id não colide.
+
+Pra aparecer na lista oficial, abra um PR adicionando uma linha em
+[`COMMUNITY.md`](COMMUNITY.md) com id, nome, repositório, licença dos dados e propriedades. A
+revisão roda o validador nos dois diretórios juntos e olha a procedência dos dados, como em
+qualquer outro PR.
+
 ## "Nunca se sobrepõe"
 
 Todo id de propriedade é prefixado pelo id do addon (`ibge-core/estado/populacao`), então dois

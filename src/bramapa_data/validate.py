@@ -25,7 +25,7 @@ import tomllib
 from dataclasses import dataclass, field
 from datetime import date, timedelta
 from pathlib import Path
-from typing import Any
+from typing import Any, Iterable
 
 KNOWN_SPEC_VERSIONS = {0}
 
@@ -204,12 +204,31 @@ def check_value(text: str, dtype: str) -> str | None:
     return None
 
 
-def load_addons(addons_dir: Path) -> list[Addon]:
-    """Discover addon directories and parse their manifests.
+AddonsDirs = Path | str | Iterable[Path | str]
 
-    Directories whose name starts with ``_`` (templates) or ``.`` are skipped.
-    Parse failures are recorded in ``Addon.load_error`` instead of raising.
+
+def as_dirs(addons_dirs: AddonsDirs) -> list[Path]:
+    """Normalise one directory or a sequence of directories to a list of paths."""
+    if isinstance(addons_dirs, (Path, str)):
+        return [Path(addons_dirs)]
+    return [Path(d) for d in addons_dirs]
+
+
+def load_addons(addons_dirs: AddonsDirs) -> list[Addon]:
+    """Discover addon directories under one or more roots and parse their manifests.
+
+    Directories whose name starts with ``_`` (templates) or ``.`` are skipped,
+    and so are roots that do not exist (the validator reports those). Parse
+    failures are recorded in ``Addon.load_error`` instead of raising. With
+    several roots the result is their concatenation, in the order given.
     """
+    addons: list[Addon] = []
+    for addons_dir in as_dirs(addons_dirs):
+        addons.extend(_load_addons_from(addons_dir))
+    return addons
+
+
+def _load_addons_from(addons_dir: Path) -> list[Addon]:
     addons: list[Addon] = []
     if not addons_dir.is_dir():
         return addons
@@ -234,10 +253,14 @@ def load_addons(addons_dir: Path) -> list[Addon]:
 
 
 class Validator:
-    """Validates every addon under ``addons_dir`` and collects findings."""
+    """Validates every addon under one or more ``addons_dirs`` as a single set.
 
-    def __init__(self, addons_dir: Path):
-        self.addons_dir = addons_dir
+    Addons from all roots share one namespace: ``addon.id`` must be unique
+    across roots and ``depends`` may point at an addon in any root.
+    """
+
+    def __init__(self, addons_dirs: AddonsDirs):
+        self.addons_dirs = as_dirs(addons_dirs)
         self.findings: list[Finding] = []
         self.by_id: dict[str, Addon] = {}
 
@@ -255,16 +278,22 @@ class Validator:
     def has_errors(self) -> bool:
         return any(f.level == "ERROR" for f in self.findings)
 
+    @property
+    def dirs_label(self) -> str:
+        return ", ".join(str(d) for d in self.addons_dirs)
+
     # -- entry point ---------------------------------------------------------
 
     def run(self) -> list[Finding]:
-        if not self.addons_dir.is_dir():
-            self.error("addons", f"directory not found: {self.addons_dir}")
+        for addons_dir in self.addons_dirs:
+            if not addons_dir.is_dir():
+                self.error("addons", f"directory not found: {addons_dir}")
+        if self.has_errors:
             return self.findings
 
-        addons = load_addons(self.addons_dir)
+        addons = load_addons(self.addons_dirs)
         if not addons:
-            self.warn("addons", f"no addons found under {self.addons_dir}")
+            self.warn("addons", f"no addons found under {self.dirs_label}")
             return self.findings
 
         loaded: list[Addon] = []
@@ -454,10 +483,11 @@ class Validator:
             if addon.id is None:
                 continue
             if addon.id in seen:
-                self.error(
-                    addon,
-                    f"[addon]: id '{addon.id}' is also declared by directory '{seen[addon.id].dirname}'",
-                )
+                other = seen[addon.id]
+                where = f"directory '{other.dirname}'"
+                if other.path.parent != addon.path.parent:
+                    where += f" under {other.path.parent}"
+                self.error(addon, f"[addon]: id '{addon.id}' is also declared by {where}")
                 continue
             seen[addon.id] = addon
         self.by_id = seen
@@ -468,7 +498,7 @@ class Validator:
         for addon in addons:
             for dep in addon.depends:
                 if dep not in self.by_id:
-                    self.error(addon, f"[addon]: depends on '{dep}', which is not present under {self.addons_dir}")
+                    self.error(addon, f"[addon]: depends on '{dep}', which is not present under {self.dirs_label}")
 
         reported: set[frozenset[str]] = set()
         for start in sorted(self.by_id):
@@ -786,9 +816,9 @@ def _type_name(types: type | tuple[type, ...]) -> str:
     return types.__name__
 
 
-def validate(addons_dir: Path | str) -> list[Finding]:
-    """Validate every addon under ``addons_dir`` and return all findings."""
-    return Validator(Path(addons_dir)).run()
+def validate(addons_dirs: AddonsDirs) -> list[Finding]:
+    """Validate every addon under ``addons_dirs`` (one path or several) as one set."""
+    return Validator(addons_dirs).run()
 
 
 def has_errors(findings: list[Finding]) -> bool:
