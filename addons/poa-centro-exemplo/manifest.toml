@@ -1,0 +1,15 @@
+spec_version = 0
+
+[addon]
+id = "poa-centro-exemplo"
+name = "Porto Alegre — override de exemplo do centro"
+version = "0.1.0"
+license = "CC-BY-4.0"
+description = "Exemplo de override manual: um chunk do nível 3 de Porto Alegre com uma praça desenhada à mão (parque, avenidas em cruz, anel de prédios), substituindo o chunk procedural. Gerado por tools/make_override.py."
+
+[[map_overrides]]
+level = 3
+entity = "municipio:4314902"
+path = "map/centro"
+chunks = [[6, 11]]
+priority = 10
