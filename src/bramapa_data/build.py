@@ -15,7 +15,7 @@ from __future__ import annotations
 
 import csv
 import shutil
-from dataclasses import dataclass
+from dataclasses import dataclass, field
 from pathlib import Path
 
 from . import __version__
@@ -63,6 +63,7 @@ class BuildResult:
     findings: list[Finding]
     addons: list[BuiltAddon]
     properties: list[BuiltProperty]
+    overrides: list["BuiltOverride"] = field(default_factory=list)
 
 
 def read_property_rows(path: Path, dtype: str) -> list[Row]:
@@ -108,6 +109,7 @@ def build(addons_dir: Path | str, out_dir: Path | str) -> BuildResult:
     out_dir.mkdir(parents=True, exist_ok=True)
     built_addons: list[BuiltAddon] = []
     built_props: list[BuiltProperty] = []
+    built_overrides: list[BuiltOverride] = []
 
     for addon in sorted(load_addons(addons_dir), key=lambda a: a.label):
         assert addon.manifest is not None and addon.id is not None  # validated
@@ -145,8 +147,36 @@ def build(addons_dir: Path | str, out_dir: Path | str) -> BuildResult:
                 )
             )
 
-    (out_dir / "index.toml").write_text(render_index(built_addons, built_props), encoding="utf-8")
-    return BuildResult(out_dir, findings, built_addons, built_props)
+        for ov in addon.map_overrides:
+            src = addon.path / ov["path"]
+            rel = f"{addon.id}/{ov['path']}"
+            dst = out_dir / rel
+            dst.mkdir(parents=True, exist_ok=True)
+            for f in sorted(src.glob("*.bmc")):
+                shutil.copyfile(f, dst / f.name)
+            built_overrides.append(
+                BuiltOverride(
+                    addon=addon.id,
+                    level=int(ov["level"]),
+                    entity=str(ov["entity"]),
+                    path=rel,
+                    chunks=[(int(c[0]), int(c[1])) for c in ov.get("chunks", [])],
+                    priority=int(ov.get("priority", 0)),
+                )
+            )
+
+    (out_dir / "index.toml").write_text(render_index(built_addons, built_props, built_overrides), encoding="utf-8")
+    return BuildResult(out_dir, findings, built_addons, built_props, built_overrides)
+
+
+@dataclass(frozen=True)
+class BuiltOverride:
+    addon: str
+    level: int
+    entity: str
+    path: str
+    chunks: list[tuple[int, int]]
+    priority: int
 
 
 def _toml_str(value: str) -> str:
@@ -169,7 +199,9 @@ def _toml_str(value: str) -> str:
     return "".join(out)
 
 
-def render_index(addons: list[BuiltAddon], properties: list[BuiltProperty]) -> str:
+def render_index(
+    addons: list[BuiltAddon], properties: list[BuiltProperty], overrides: list[BuiltOverride] | None = None
+) -> str:
     """Render ``index.toml``: the spec's fields plus name/unit/dtype/entity_type/addon.
 
     ``period_min``/``period_max`` are full ISO dates (``YYYY-MM-DD``) of the
@@ -212,6 +244,18 @@ def render_index(addons: list[BuiltAddon], properties: list[BuiltProperty]) -> s
             f"unit = {_toml_str(prop.unit)}",
             f"dtype = {_toml_str(prop.dtype)}",
             f"periodicity = {_toml_str(prop.periodicity)}",
+            "",
+        ]
+    for ov in overrides or []:
+        chunks = ", ".join(f"[{cx}, {cy}]" for cx, cy in ov.chunks)
+        lines += [
+            "[[map_overrides]]",
+            f"addon = {_toml_str(ov.addon)}",
+            f"level = {ov.level}",
+            f"entity = {_toml_str(ov.entity)}",
+            f"path = {_toml_str(ov.path)}",
+            f"chunks = [{chunks}]",
+            f"priority = {ov.priority}",
             "",
         ]
     return "\n".join(lines)
