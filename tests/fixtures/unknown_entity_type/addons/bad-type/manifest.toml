@@ -1,0 +1,17 @@
+spec_version = 0
+
+[addon]
+id = "bad-type"
+name = "Unknown entity type fixture"
+version = "0.1.0"
+license = "CC0-1.0"
+
+[[properties]]
+id = "renda"
+entity_type = "bairro"
+name = "Renda"
+unit = "BRL"
+dtype = "f64"
+periodicity = "anual"
+source = "fixture"
+file = "data/bairro_renda.csv"

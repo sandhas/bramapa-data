@@ -1,0 +1,25 @@
+spec_version = 0
+
+[addon]
+id = "ring-a"
+name = "Ring A"
+version = "0.1.0"
+license = "CC0-1.0"
+depends = ["ring-b"]
+
+[[entity_types]]
+id = "usina"
+name = "Usina"
+min_level = 2
+position = "latlon"
+file = "data/usina.csv"
+
+[[properties]]
+id = "potencia"
+entity_type = "ring-b/torre"
+name = "Potência"
+unit = "MW"
+dtype = "f64"
+periodicity = "pontual"
+source = "fixture"
+file = "data/torre_potencia.csv"

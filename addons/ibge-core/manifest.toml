@@ -1,0 +1,49 @@
+spec_version = 0
+
+[addon]
+id = "ibge-core"
+name = "IBGE — dados básicos"
+version = "0.1.0"
+license = "CC-BY-4.0"
+authors = ["Bramapa contributors"]
+description = "População e área territorial por UF e população do país (Censo 2022 / Áreas territoriais 2022)."
+depends = []
+
+[[properties]]
+id = "populacao"
+entity_type = "estado"
+name = "População residente"
+unit = "habitantes"
+dtype = "i64"
+periodicity = "decenal"
+source = "IBGE — Censo Demográfico 2022"
+source_url = "https://www.ibge.gov.br/estatisticas/sociais/populacao/22827-censo-demografico-2022.html"
+file = "data/estado_populacao.csv"
+
+[[properties]]
+id = "area_km2"
+entity_type = "estado"
+name = "Área territorial"
+unit = "km²"
+dtype = "f64"
+periodicity = "pontual"
+source = "IBGE — Áreas territoriais 2022"
+source_url = "https://www.ibge.gov.br/geociencias/organizacao-do-territorio/estrutura-territorial/15761-areas-dos-municipios.html"
+file = "data/estado_area_km2.csv"
+
+[[properties]]
+id = "populacao"
+entity_type = "pais"
+name = "População residente"
+unit = "habitantes"
+dtype = "i64"
+periodicity = "decenal"
+source = "IBGE — Censo Demográfico 2022"
+source_url = "https://www.ibge.gov.br/estatisticas/sociais/populacao/22827-censo-demografico-2022.html"
+file = "data/pais_populacao.csv"
+
+[[render]]
+property = "estado/populacao"
+kind = "choropleth"
+ramp = "viridis"
+scale = "log"

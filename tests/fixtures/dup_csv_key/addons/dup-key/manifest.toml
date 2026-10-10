@@ -1,0 +1,17 @@
+spec_version = 0
+
+[addon]
+id = "dup-key"
+name = "Duplicate CSV key fixture"
+version = "0.1.0"
+license = "CC0-1.0"
+
+[[properties]]
+id = "populacao"
+entity_type = "estado"
+name = "População"
+unit = "habitantes"
+dtype = "i64"
+periodicity = "anual"
+source = "fixture"
+file = "data/estado_populacao.csv"

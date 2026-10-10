@@ -1,0 +1,57 @@
+# Template de addon do Bramapa (spec v0).
+#
+# Copie este diretório para addons/<seu-addon-id>/, preencha os campos e rode
+# `uv run bramapa-data validate`. Diretórios começando com "_" são ignorados
+# pelo validador, então este template nunca entra na validação.
+#
+# Contrato completo: docs/spec/addon.md no repositório bramapa.
+
+spec_version = 0
+
+[addon]
+id = "meu-addon"                 # [a-z0-9-]+, único no ecossistema; deve ser igual ao nome do diretório
+name = "Meu addon"
+version = "0.1.0"                # semver
+license = "CC-BY-4.0"            # licença DOS DADOS deste addon (SPDX), não do código
+authors = ["Nome <email>"]
+description = "Uma frase dizendo o que este addon mede."
+depends = []                     # ids de addons cujos tipos de entidade este usa, ex.: ["aneel-usinas"]
+
+# Opcional: tipos de entidade novos (além dos tipos base pais | estado | municipio).
+# Na instância, o id de entidade fica "<id>:<codigo>", ex.: "usina:ANEEL-12345".
+#
+# [[entity_types]]
+# id = "usina"
+# name = "Usina de energia"
+# min_level = 2                  # a partir de qual nível aparece no mapa (1 país, 2 estado, 3 município)
+# position = "latlon"            # latlon | none
+# icon = "usina"                 # nome de tile de classe object no tileset (opcional)
+# file = "data/usina.csv"        # colunas: entity,name,lat,lon
+
+# Uma ou mais propriedades. Id canônico: <addon.id>/<entity_type>/<id>.
+[[properties]]
+id = "exemplo"
+entity_type = "estado"           # base (pais | estado | municipio), declarado acima, ou "<dep>/<tipo>" de uma dependência
+name = "Exemplo"
+unit = "unidades"
+dtype = "i64"                    # i64 | f64 | str
+periodicity = "anual"            # anual | decenal | mensal | diaria | pontual
+source = "Órgão — nome da publicação"
+source_url = "https://exemplo.gov.br/..."
+# license = "CC-BY-4.0"          # opcional, padrão = addon.license
+file = "data/estado_exemplo.csv" # cabeçalho obrigatório: entity,period_start,period_end,value
+
+# Opcional: como exibir no mapa. Sem regra, a propriedade só aparece no painel.
+# [[render]]
+# property = "estado/exemplo"    # "<entity_type>/<id>" relativo a este addon
+# kind = "choropleth"            # choropleth | icon | label
+# ramp = "viridis"               # para choropleth
+# scale = "linear"               # linear | log
+
+# Opcional: override manual de mapa (ver chunk.md).
+# [[map_overrides]]
+# level = 3
+# entity = "municipio:4314902"
+# path = "map/poa-centro"        # diretório com chunks .bmc; sem level.toml
+# chunks = [[8, 7], [9, 7]]
+# priority = 10                  # maior vence
