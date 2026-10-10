@@ -6,7 +6,9 @@ readme = "README.md"
 requires-python = ">=3.12"
 license = "MIT OR Apache-2.0"
 authors = [{ name = "Bramapa contributors" }]
-dependencies = []
+dependencies = [
+    "zstandard>=0.25.0",
+]
 
 [project.scripts]
 bramapa-data = "bramapa_data.cli:main"

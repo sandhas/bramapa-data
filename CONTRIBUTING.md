@@ -17,11 +17,18 @@ por estado ou município e sabe de onde ela veio, você consegue fazer um addon.
 3. **Escreva um `README.md`** no addon dizendo de onde vieram os números (link pra publicação
    original) e o que você transformou, se transformou.
 4. **Rode `uv run bramapa-data validate`** até sair `OK`. Cada `ERROR` traz o arquivo e a linha.
-5. **Abra um PR** com o diretório novo. A revisão olha procedência dos dados e licença, não
+5. **Rode `uv run bramapa-data build --out /tmp/bmd`** pra ver seu addon virar `.bmd` e aparecer
+   no `index.toml`; `uv run bramapa-data inspect /tmp/bmd/<addon>/<tipo>/<prop>.bmd` mostra as
+   primeiras linhas como o motor vai ler. Não comite a saída do build.
+6. **Abra um PR** com o diretório novo. A revisão olha procedência dos dados e licença, não
    estilo; o validador já cuidou do formato.
 
 Pra atualizar um addon existente, mude a `version` no manifesto (patch pra corrigir número,
 minor pra adicionar propriedade ou período, major se mudou id ou removeu algo).
+
+Se seus dados vêm de uma API (como o `ibge-core`, que puxa do SIDRA via `tools/fetch_ibge.py`),
+comite o script junto e gere os CSVs com ele em vez de digitar: fica reprodutível e a revisão
+consegue rodar o mesmo comando.
 
 ## "Nunca se sobrepõe"
 

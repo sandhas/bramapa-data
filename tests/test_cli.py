@@ -19,6 +19,12 @@ def test_validate_broken_fixture_exit_nonzero(fixture_addons_dir, capsys):
 def test_list_shows_canonical_property_ids(real_addons_dir, capsys):
     assert main(["list", str(real_addons_dir)]) == 0
     out = capsys.readouterr().out
-    for prop in ("ibge-core/estado/populacao", "ibge-core/estado/area_km2", "ibge-core/pais/populacao"):
+    for prop in (
+        "ibge-core/estado/populacao",
+        "ibge-core/estado/pib",
+        "ibge-core/estado/area_km2",
+        "ibge-core/pais/populacao",
+        "ibge-core/pais/pib",
+    ):
         assert prop in out
     assert "meu-addon" not in out
